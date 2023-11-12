@@ -32,6 +32,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      
+      - name: Display Changes
+        run: |
+          echo "Before: ${{ github.event.before }}"
+          echo "After: ${{ github.event.after }}"
+          ls
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
