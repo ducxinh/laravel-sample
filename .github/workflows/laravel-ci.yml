@@ -43,6 +43,7 @@ jobs:
 
       - name: Copy environment file
         run: cp .env.example .env
+      
       - name: Update Laravel .env
         run: |
           echo "DB_CONNECTION=mysql" >> .env

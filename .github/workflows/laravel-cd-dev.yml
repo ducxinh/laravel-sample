@@ -1,0 +1,46 @@
+name: Laravel CD to EC2
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+    name: Deploy Dev
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_DIR: "./"
+      APP_KEY: base64:d3dLgjYPsyYu8KJQQoFj9XPlbX5soiLcaJvjIX2lIj0=
+      APP_URL: https://ducxinh.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Copy environment file
+        run: cp .env.example .env
+      
+      - name: Update Laravel .env
+        run: |
+          echo '${{ secrets.LARAVEL_ENV_DEV }}' > .env
+
+      - name: Deploy to EC2
+        uses: easingthemes/ssh-deploy@main
+        with: 
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ARGS: "-rlgoDzvc -i --delete"
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          TARGET: ${{ secrets.REMOTE_TARGET_DIR }}
+          EXCLUDE: "/storage/logs/, /vendor, /node_modules/"
+          SCRIPT_BEFORE: |
+            whoami
+          SCRIPT_AFTER: |
+            echo "SCRIPT_AFTER1"
+            whoami
+            cd ${{ secrets.REMOTE_TARGET_DIR }}
+            pwd
+            composer install --optimize-autoloader --no-dev
+            php artisan migrate --force
+            php artisan db:seed --force
+            echo $RSYNC_STDOUT
