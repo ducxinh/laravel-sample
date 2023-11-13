@@ -23,6 +23,29 @@ jobs:
       - name: Update Laravel .env
         run: |
           echo '${{ secrets.LARAVEL_ENV_DEV }}' > .env
+      
+      - name: Public IP
+        id: ip
+        uses: haythem/public-ip@v1.3
+
+
+      - name: Print Runner Public IP
+        run: |
+          echo ${{ steps.ip.outputs.ipv4 }}
+          echo ${{ steps.ip.outputs.ipv6 }}
+      
+      - name: AWS set Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+      
+      - name: Add Github actions Runner IP to WhiteList
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.EC2_SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
 
       - name: Deploy to EC2
         uses: easingthemes/ssh-deploy@main
@@ -44,3 +67,9 @@ jobs:
             php artisan migrate --force
             php artisan db:seed --force
             echo $RSYNC_STDOUT
+      
+      - name: Revoke security group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress --group-id ${{ secrets.EC2_SECURITY_GROUP_ID }} --protocol tcp --port 22 --cidr "${{ steps.ip.outputs.ipv4 }}/32"
+          
